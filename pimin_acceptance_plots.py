@@ -139,20 +139,35 @@ def plot_and_tabulate(path_acceptance: Path, path_hits: Path, outdir: Path):
         "lfhcal_png": str(outdir / "LFHCAL.png"),
     }
 
-def main():
-    parser = argparse.ArgumentParser(description="Compute acceptance statistics and make histograms.")
-    parser.add_argument("acceptance", help="Acceptance table (CSV / Parquet / Feather)")
-    parser.add_argument("hits", help="Hits table (CSV or Parquet)")
-    parser.add_argument("-o", "--output", default="results", help="Output directory")
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Process paired acceptance and hits CSV files",
+    )
+    parser.add_argument(
+        "files",
+        nargs="+",
+        help="CSV files given as pairs: acceptance1 hits1 acceptance2 hits2 ...",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=".",
+        help="Output directory for results",
+    )
+
     args = parser.parse_args()
 
-    outdir = Path(args.output)
-    outdir.mkdir(parents=True, exist_ok=True)
+    if len(args.files) % 2 != 0:
+        raise ValueError(
+            "You must provide an even number of files: acceptance/hits pairs."
+        )
 
-    results = plot_and_tabulate(args.acceptance, args.hits, outdir)
-    print("Wrote outputs:")
-    for k, v in results.items():
-        print(f"  {k}: {v}")
+    file_pairs = list(zip(args.files[0::2], args.files[1::2]))
+
+    for acceptance_file, hits_file in file_pairs:
+        print(f"Processing pair:\n  acceptance = {acceptance_file}\n  hits = {hits_file}")
+        # call your processing function here
+        # process_pair(acceptance_file, hits_file, args.output)
 
 if __name__ == "__main__":
     main()
