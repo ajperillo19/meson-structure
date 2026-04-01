@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import argparse
 
 def stats(path_acceptance: Path, outdir: Path):
     """Compute summary stats and write stats CSV to outdir."""
@@ -48,13 +49,8 @@ def plot_vtx(path_acceptance: Path, outdir: Path):
 
     df = pd.read_parquet(path_acceptance, columns=cols)
 
-        
-    # 3/18/26: Comment out correlation data frame --> will plot vertex information across all events 
-    # mask for correlated events  
     detectors = [c for c in df.columns if c.startswith("pimin_")]
-
     mask = (df[detectors] == 1).any(axis=1)
-
     df_corr = df[mask]
 
     # prepare safe extraction (handle empty df_corr)
@@ -101,50 +97,59 @@ def plot_vtx(path_acceptance: Path, outdir: Path):
         return path
 
     # Proton p vs z
-    saved_paths.append(_save_hist2d(prot_zvtx, prot_p, bins=(100,100), range = ((0,40), (0,300)),
+    saved_paths.append(_save_hist2d(prot_zvtx, prot_p, bins=(100,100), range = ((0,35), (0,300)),
                                    xlabel=r"$z_{vtx}$ (m)", ylabel=r"p (GeV/c)",
                                    title=r"p vs $z_{vtx}$ (proton)",
                                    fname="prot_p_vs_z.png"))
 
     # Proton theta vs z
-    saved_paths.append(_save_hist2d(prot_zvtx, prot_theta, bins=(100,100), range = ((0,40), (0,100)),
+    saved_paths.append(_save_hist2d(prot_zvtx, prot_theta, bins=(100,100), range = ((0,35), (0,100)),
                                    xlabel=r"$z_{vtx}$ (m)", ylabel=r"$\theta$ (mrad)",
                                    title=r"$\theta$ vs $z_{vtx}$ (proton)",
                                    fname="prot_theta_vs_z.png"))
 
     # Pimin p vs z
-    saved_paths.append(_save_hist2d(pimin_zvtx, pimin_p, bins=(100,100), range = ((0,40), (0,100)),
+    saved_paths.append(_save_hist2d(pimin_zvtx, pimin_p, bins=(100,100), range = ((0,35), (0,100)),
                                    xlabel=r"$z_{vtx}$ (m)", ylabel=r"p (GeV/c)",
                                    title=r"p vs $z_{vtx}$ ($\pi^-$)",
                                    fname="pimin_p_vs_z.png"))
 
     # Pimin theta vs z
-    saved_paths.append(_save_hist2d(pimin_zvtx, pimin_theta, bins=(100,100), range = ((0,40),(0,100)),
+    saved_paths.append(_save_hist2d(pimin_zvtx, pimin_theta, bins=(100,100), range = ((0,35),(0,100)),
                                    xlabel=r"$z_{vtx}$ (m)", ylabel=r"$\theta$ (mrad)",
                                    title=r"$\theta$ vs $z_{vtx}$ ($\pi^-$)",
                                    fname="pimin_theta_vs_z.png"))
 
     return saved_paths
 
-def main():
-    base_dir = Path("/home/ajperillo19/SULI_JLAB_2026")
-    beams = ["5x41", "10x100", "10x130", "18x275"]
-    out_base = base_dir / "results"
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Plot z-vertex for charged DIS Sullivan process events."
+    )
+    parser.add_argument(
+        "file",
+        help="Path to input .parquet data file"
+    )
+    parser.add_argument(
+        "--results-dir", "-o",
+        default="results",
+        help="Directory to write output into (created if absent). Default: ./results"
+    )
 
-    for beam in beams:
-        path_acceptance = base_dir / f"{beam}_acceptance.duckdb.parquet"
-        if not path_acceptance.exists():
-            print(f"Warning: {path_acceptance} not found, skipping")
-            continue
+    parser.add_argument("--beam", "-b", default=None, help="For compatibility. Is not used")
 
-        print(f"Processing beam: {beam}")
-        outdir = out_base / beam
-        df_stats, stats_path = stats(path_acceptance=path_acceptance, outdir=outdir)
-        print(f"  Wrote stats CSV to {stats_path}")
+    parser.add_argument(
+        "--cmap", default="viridis",
+        help="Matplotlib colormap name. Default: viridis"
+    )
+    return parser.parse_args()
 
-        plot_paths = plot_vtx(path_acceptance=path_acceptance, outdir=outdir)
-        for p in plot_paths:
-            print(f"  Saved plot: {p}")
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    stats(  path_acceptance=args.file,
+        outdir=args.results_dir,)
+    plot_vtx(
+        path_acceptance=args.file,
+        outdir=args.results_dir,
+    )
